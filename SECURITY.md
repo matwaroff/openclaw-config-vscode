@@ -59,13 +59,24 @@ This repository enforces continuous secret scanning in CI via Gitleaks.
 
 ## Security Hardening Scope in This Extension
 
-This extension already includes runtime hardening for remote schema sync:
+This extension includes runtime hardening across all remote and local resource access:
 
+### Remote schema synchronization
 - HTTPS-only remote manifests/artifacts.
-- Host and repository allowlist checks.
-- SHA-256 verification of downloaded artifacts.
+- Host and repository allowlist checks (default: `raw.githubusercontent.com`, `jorekai/openclaw-config-vscode`).
+- SHA-256 integrity verification of all downloaded artifacts.
 - Cache/bundled fallback behavior on failure.
+- The downloaded validator artifact (`.mjs`) is written to the local cache for integrity bookkeeping but **never dynamically imported from the cache** — the extension only executes the validator bundled at build time from the extension's own install directory.
+
+### Local plugin-hints file
+- The `openclawConfig.plugins.metadataLocalPath` setting accepts only workspace-relative paths.
+- Absolute paths are rejected to prevent a malicious workspace settings file from reading arbitrary files outside the workspace (e.g., credential files, SSH keys).
+- Path traversal sequences (e.g., `../../`) that escape the workspace root are also rejected.
+
+### Remote plugin-hints URL
+- Subject to the same host and repository allowlist as schema artifacts.
+- HTTPS required; blocked if the URL does not pass the policy.
 
 ## Scope Boundaries
 
-This extension validates and assists editing of `openclaw.json`. It does not act as a secret vault, key manager, or runtime credential broker.
+This extension validates and assists editing of `openclaw.json`. It does not act as a secret vault, key manager, or runtime credential broker. It does not transmit workspace file contents or `openclaw.json` values to any remote server.

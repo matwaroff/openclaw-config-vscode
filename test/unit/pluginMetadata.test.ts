@@ -154,4 +154,42 @@ describe("plugin metadata loader", () => {
     assert.equal(result.warnings.length > 0, true);
     assert.match(result.warnings[0], /blocked/i);
   });
+
+  it("rejects an absolute localPath to prevent arbitrary file reads", async () => {
+    const workspaceRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-plugin-hints-"));
+    tempRoots.push(workspaceRoot);
+
+    const result = await loadPluginHintEntries({
+      workspaceRoot,
+      localPath: "/etc/passwd",
+      securityPolicy: {
+        requireHttps: true,
+        allowedHosts: ["raw.githubusercontent.com"],
+        allowedRepositories: ["jorekai/openclaw-config-vscode"],
+      },
+    });
+
+    assert.equal(result.entries.length, 0);
+    assert.equal(result.warnings.length, 1);
+    assert.match(result.warnings[0], /absolute paths are not allowed/i);
+  });
+
+  it("rejects a path traversal localPath that escapes the workspace root", async () => {
+    const workspaceRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-plugin-hints-"));
+    tempRoots.push(workspaceRoot);
+
+    const result = await loadPluginHintEntries({
+      workspaceRoot,
+      localPath: "../../etc/passwd",
+      securityPolicy: {
+        requireHttps: true,
+        allowedHosts: ["raw.githubusercontent.com"],
+        allowedRepositories: ["jorekai/openclaw-config-vscode"],
+      },
+    });
+
+    assert.equal(result.entries.length, 0);
+    assert.equal(result.warnings.length, 1);
+    assert.match(result.warnings[0], /must not escape the workspace root/i);
+  });
 });
