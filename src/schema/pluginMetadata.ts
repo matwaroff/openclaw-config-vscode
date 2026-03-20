@@ -111,9 +111,17 @@ async function loadLocalEntries(options: PluginHintLoadOptions): Promise<PluginH
     return [];
   }
 
-  const resolvedPath = path.isAbsolute(localPath)
-    ? localPath
-    : path.resolve(workspaceRoot, localPath);
+  if (path.isAbsolute(localPath)) {
+    throw new Error(
+      "Plugin metadata local path must be workspace-relative (absolute paths are not allowed).",
+    );
+  }
+
+  const resolvedPath = path.resolve(workspaceRoot, localPath);
+  const normalizedRoot = path.resolve(workspaceRoot);
+  if (!resolvedPath.startsWith(normalizedRoot + path.sep) && resolvedPath !== normalizedRoot) {
+    throw new Error("Plugin metadata local path must not escape the workspace root.");
+  }
 
   let raw: string;
   try {
